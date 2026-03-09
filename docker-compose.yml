@@ -4,11 +4,8 @@ services:
   agent_emploi:
     build: .
     container_name: bot_candidatures_daniel
-    restart: unless-stopped # Le conteneur redémarre tout seul si le serveur redémarre
+    restart: unless-stopped
     environment:
-      # La clé sera lue depuis un fichier .env sur ta machine hôte
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
     volumes:
-      # Monte un dossier local ./db_data vers /app/data dans le conteneur
-      # Cela garantit que ton fichier SQLite survit à l'arrêt du conteneur !
       - ./db_data:/app/data

@@ -1,25 +1,18 @@
 import sys
+import os
 import sqlite3
 import datetime
-import time
+import asyncio
 
-
-# ==========================================
-# IMPORTS DE TES AGENTS (Fichiers précédents)
-# ==========================================
-# Décommente ces lignes quand tes autres scripts sont prêts et dans le même dossier
-# from agent_scraper import scraper_offres
-# from pipeline_candidature import analyser_et_rediger  # Ta fonction CrewAI
-# from agent_relance import generer_relance             # Ta fonction CrewAI de relance
+# === IMPORT DES AGENTS ===
+from agent_scraper import scraper_offres
+from pipeline_candidature import analyser_et_rediger
+from agent_relance import generer_relance
 
 DB_NAME = "data/candidatures.db"
 
-# ==========================================
-# 1. INITIALISATION DE LA BASE DE DONNÉES
-# ==========================================
 def init_db():
-    
-    """Crée la table si elle n'existe pas encore."""
+    os.makedirs("data", exist_ok=True) # Crée le dossier data/ s'il n'existe pas
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute('''
@@ -38,161 +31,154 @@ def init_db():
     ''')
     conn.commit()
     conn.close()
-    print(" Base de données initialisée avec succès.")
 
-# ==========================================
-# 2. INTÉGRATION DES NOUVELLES OFFRES (Le Scraper)
-# ==========================================
 def enregistrer_nouvelles_offres(offres_trouvees):
-    """Enregistre les offres du scraper sans faire de doublons."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     ajouts = 0
-    
     for offre in offres_trouvees:
         try:
+            # CORRECTION DU DEPRECATION WARNING : On convertit la date en texte avec str()
             cursor.execute('''
                 INSERT INTO candidatures (titre, entreprise, lien, description, statut, date_ajout)
                 VALUES (?, ?, ?, ?, ?, ?)
-            ''', (offre['titre'], offre['entreprise'], offre['lien'], offre['description'], 'TROUVEE', datetime.date.today()))
+            ''', (offre['titre'], offre['entreprise'], offre['lien'], offre['description'], 'TROUVEE', str(datetime.date.today())))
             ajouts += 1
         except sqlite3.IntegrityError:
-            # Le lien existe déjà dans la BDD (contrainte UNIQUE), on ignore
             pass
-            
     conn.commit()
     conn.close()
-    print(f" {ajouts} nouvelles offres ajoutées à la base de données.")
+    print(f"📥 {ajouts} nouvelles offres ajoutées à la BDD.")
 
-# ==========================================
-# 3. TRAITEMENT PAR L'IA (Analyste & Rédacteur)
-# ==========================================
 def traiter_offres_trouvees():
-    """Trouve les offres 'TROUVEE' et génère les lettres de motivation."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    
     cursor.execute("SELECT id, titre, entreprise, description FROM candidatures WHERE statut = 'TROUVEE'")
     offres_a_traiter = cursor.fetchall()
     
     for offre in offres_a_traiter:
         id_offre, titre, entreprise, description = offre
-        print(f" Analyse et rédaction en cours pour : {titre} chez {entreprise}...")
+        print(f"\n🤖 Lancement IA : {titre} chez {entreprise}...")
         
-        #  ICI ON APPELLE TON SCRIPT CREWAI
-        # lettre = analyser_et_rediger(description) 
-        lettre = "Ceci est une lettre de motivation simulée générée par l'IA." # Remplacer par l'appel réel
+        lettre = analyser_et_rediger(description) 
         
-        # On met à jour le statut
         cursor.execute('''
-            UPDATE candidatures 
-            SET statut = 'A_POSTULER', lettre_generee = ?
-            WHERE id = ?
+            UPDATE candidatures SET statut = 'A_POSTULER', lettre_generee = ? WHERE id = ?
         ''', (lettre, id_offre))
         
     conn.commit()
     conn.close()
-    print(f" {len(offres_a_traiter)} offres sont prêtes à être envoyées (Statut: A_POSTULER).")
+    print(f"✅ {len(offres_a_traiter)} lettres générées (Statut: A_POSTULER).")
 
-# ==========================================
-# 4. GESTION DES RELANCES (Agent Relance)
-# ==========================================
 def verifier_et_creer_relances():
-    """Vérifie si des candidatures 'POSTULEE' datent de plus de 7 jours."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    
     limite_jours = datetime.date.today() - datetime.timedelta(days=7)
     
-    cursor.execute("SELECT id, entreprise, titre, date_action FROM candidatures WHERE statut = 'POSTULEE' AND date_action <= ?", (limite_jours,))
+    # Correction de la date ici aussi
+    cursor.execute("SELECT id, entreprise, titre, date_action FROM candidatures WHERE statut = 'POSTULEE' AND date_action <= ?", (str(limite_jours),))
     a_relancer = cursor.fetchall()
     
     for offre in a_relancer:
         id_offre, entreprise, titre, date_postulat = offre
-        print(f" Relance nécessaire pour {entreprise} (Postulé le {date_postulat}). Création du brouillon...")
+        print(f"⏰ Relance IA pour {entreprise}...")
         
-        #  ICI ON APPELLE TON SCRIPT DE RELANCE CREWAI
-        # infos = {"entreprise": entreprise, "poste_vise": titre, "date_envoi": date_postulat}
-        # brouillon = generer_relance(infos)
-        brouillon = "Objet: Relance\n\nBonjour, je vous relance pour ma candidature..." # Simulation
+        infos = {"entreprise": entreprise, "poste_vise": titre, "date_envoi": date_postulat}
+        brouillon = generer_relance(infos)
         
         cursor.execute('''
-            UPDATE candidatures 
-            SET statut = 'A_RELANCER', brouillon_relance = ?
-            WHERE id = ?
+            UPDATE candidatures SET statut = 'A_RELANCER', brouillon_relance = ? WHERE id = ?
         ''', (brouillon, id_offre))
 
     conn.commit()
     conn.close()
-    print(f" {len(a_relancer)} brouillons de relance générés.")
+    print(f"📧 {len(a_relancer)} brouillons de relance générés.")
 
-# ==========================================
-#  MENU PRINCIPAL DU CHEF D'ORCHESTRE
-# ==========================================
+def lire_resultats():
+    """Affiche les lettres générées dans le terminal"""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT entreprise, lettre_generee FROM candidatures WHERE statut = 'A_POSTULER'")
+    resultats = cursor.fetchall()
+    
+    for row in resultats:
+        entreprise, lettre = row
+        print(f"\n{'='*50}\n📄 LETTRE POUR : {entreprise}\n{'='*50}\n{lettre}")
+    conn.close()
+
 if __name__ == "__main__":
     init_db()
     
-    print("\n---  PIPELINE DE CANDIDATURE DE DANIEL ---")
-    print("1. Lancer le Scraper (Chercher de nouvelles offres)")
-    print("2. Lancer l'IA (Rédiger les lettres pour les nouvelles offres)")
-    print("3. Vérifier les relances (Créer les brouillons après 7j)")
-    print("4. Afficher le tableau de bord des candidatures")
-    
-    choix = input("\nQue veux-tu faire ? (1/2/3/4) : ")
-    
-    if choix == "1":
-        # url = "https://www.wttj.com/..."
-        # offres = asyncio.run(scraper_offres(url))
-        offres_simulees = [
-            {"titre": "Stage DevOps", "entreprise": "Thales", "lien": "http://lien1", "description": "Offre Thales..."},
-            {"titre": "Dev Fullstack", "entreprise": "Naval Group", "lien": "http://lien2", "description": "Offre Naval..."}
-        ]
-        enregistrer_nouvelles_offres(offres_simulees)
-        
-    elif choix == "2":
-        traiter_offres_trouvees()
-        
-    elif choix == "3":
-        verifier_et_creer_relances()
-        
-    elif choix == "4":
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        cursor.execute("SELECT statut, COUNT(*) FROM candidatures GROUP BY statut")
-        stats = cursor.fetchall()
-        print("\n ÉTAT DE TES CANDIDATURES :")
-        for statut, count in stats:
-            print(f"- {statut} : {count}")
-        conn.close()
-    else:
-        print("Choix invalide.")
-        
-if __name__ == "__main__":
-    init_db()
-    
-    # Si on lance le script avec l'argument "--auto" (ex: python chef_orchestre.py --auto)
     if len(sys.argv) > 1 and sys.argv[1] == "--auto":
-        print(" [MODE AUTO] Lancement de la routine matinale...")
-        
-        # 1. On lance le scraper
-        # offres = asyncio.run(scraper_offres("TON_URL_ICI"))
-        # enregistrer_nouvelles_offres(offres)
-        
-        # 2. On lance l'IA pour rédiger
+        print("🤖 [MODE AUTO] Lancement de la routine...")
         traiter_offres_trouvees()
-        
-        # 3. On vérifie les relances
         verifier_et_creer_relances()
-        
-        print(" [MODE AUTO] Routine terminée avec succès.")
-        
+        print("✅ [MODE AUTO] Terminé.")
     else:
-        # Mode Manuel (celui qu'on avait avant)
-        print("\n---  PIPELINE DE CANDIDATURE DE DANIEL ---")
-        print("1. Lancer le Scraper (Chercher de nouvelles offres)")
-        print("2. Lancer l'IA (Rédiger les lettres pour les nouvelles offres)")
-        print("3. Vérifier les relances (Créer les brouillons après 7j)")
-        print("4. Afficher le tableau de bord")
-        choix = input("\nQue veux-tu faire ? (1/2/3/4) : ")
-        
-        # ... (Garder tes conditions if choix == "1", etc. ici) ...
+        while True:
+            print("\n--- 🛠️ PIPELINE DE CANDIDATURE ---")
+            print("1. Injecter l'offre de test ETINARS (Pour tester l'IA)")
+            print("2. Lancer le Scraper (Chercher sur le web)")
+            print("3. Lancer l'IA (Rédiger les lettres)")
+            print("4. Vérifier les relances (Après 7j)")
+            print("5. Afficher les statistiques")
+            print("6. 📖 LIRE LES LETTRES GÉNÉRÉES")
+            print("0. Quitter")
+            
+            choix = input("\nChoix : ")
+            
+            if choix == "1":
+                # TON OFFRE ETINARS EST INJECTÉE ICI
+                offre_mock = [{
+                    "titre": "Stage Cloud Developer - Kubernetes / DevOps (Toulouse | Space)", 
+                    "entreprise": "Etinars", 
+                    "lien": "https://www.etinars.com", 
+                    "description": """WHO WE ARE
+Etinars est une entreprise guidée par des fermes valeurs, forte de plusieurs années d’expérience, spécialisée dans le recrutement de professionnels sur des marchés de niche, en gérant l’ensemble du cycle de recrutement de profils spécialisés et exécutifs.
+Chez Etinars, nous nous intéressons réellement à qui vous êtes et à ce dont vous avez besoin.
+Nous accordons une grande importance à la création de relations solides et durables, basées sur la confiance et la transparence.
+Notre approche vous accompagne à chaque étape, avec un parcours rapide et structuré vers votre prochaine évolution de carrière.
+
+WHAT WE ARE LOOKING FOR
+Stage Cloud Developer - Kubernetes / DevOps (Toulouse | Space)
+Rejoignez un environnement international qui contribue à des programmes nationaux et européens dans des domaines où la fiabilité, la précision et la sécurité sont essentielles (notamment Space, défense et transport). Vous évoluerez au sein d’équipes mêlant ingénierie, opérations et services digitaux, avec un fort focus sur des technologies modernes et utiles “dans la vraie vie”.
+Nous recherchons un(e) Cloud Developer Intern pour rejoindre l'équipe de notre client basée à Toulouse. Ce stage est une opportunité concrète et “hands-on” pour apprendre à concevoir et maintenir une infrastructure cloud-native basée sur Kubernetes, dans un contexte DevOps/SRE.
+Durée : stage de 6 mois (convention universitaire, stage de fin d’études, 5e année / Master). Début idéal février / mars. Si l’évaluation du stage est positive, une poursuite en CDI pourra être envisagée.
+
+YOUR TASKS
+Dans ce rôle, vous serez amené(e) à :
+Participer à la conception et au déploiement d’un cluster Kubernetes sur un cloud public.
+Automatiser des environnements avec Terraform, Helm et Ansible.
+Mettre en place des solutions de monitoring et logging : Prometheus, Grafana, ELK, Loki.
+Contribuer au déploiement d’applications conteneurisées via GitLab CI ou ArgoCD.
+Participer à la documentation (best practices, procédures) pour capitaliser la connaissance.
+Suivre l’évolution des outils cloud-native et partager vos recommandations avec l’équipe.
+
+YOUR SKILLS AND EXPERIENCE
+Étudiant(e) en Ingénierie, Informatique, Computer Science ou Cloud Systems.
+Première familiarité avec Docker, Kubernetes (ou Rancher) via cours/projets/stage est un plus.
+À l’aise sur environnement Linux.
+Scripting : Bash et/ou Python.
+Curieux(se), rigoureux(se), fiable, avec une vraie motivation à apprendre et à progresser.
+Esprit d’équipe et capacité à travailler dans un environnement structuré."""
+                }]
+                enregistrer_nouvelles_offres(offre_mock)
+            elif choix == "2":
+                url = input("URL à scraper (ex: site-emploi.com) : ")
+                offres = asyncio.run(scraper_offres(url))
+                enregistrer_nouvelles_offres(offres)
+            elif choix == "3":
+                traiter_offres_trouvees()
+            elif choix == "4":
+                verifier_et_creer_relances()
+            elif choix == "5":
+                conn = sqlite3.connect(DB_NAME)
+                cursor = conn.cursor()
+                cursor.execute("SELECT statut, COUNT(*) FROM candidatures GROUP BY statut")
+                for statut, count in cursor.fetchall():
+                    print(f"- {statut} : {count}")
+                conn.close()
+            elif choix == "6":
+                lire_resultats()
+            elif choix == "0":
+                break
