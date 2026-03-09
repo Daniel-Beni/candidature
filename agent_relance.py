@@ -1,10 +1,17 @@
+# pyright: reportMissingImports=false
 import os
 from dotenv import load_dotenv
-from crewai import Agent, Task, Crew, Process
-from langchain_google_genai import ChatGoogleGenerativeAI
+from crewai import Agent, Task, Crew, Process, LLM
 
 load_dotenv() 
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.5)
+
+# CONFIGURATION NATIVE CREWAI POUR GROQ
+llm = LLM(
+    model="groq/llama-3.3-70b-versatile",
+    temperature=0.5
+)
+
+# ... le reste du code (agents et tâches) reste EXACTEMENT pareil ...
 
 def generer_relance(infos_suivi):
     agent_relance = Agent(
