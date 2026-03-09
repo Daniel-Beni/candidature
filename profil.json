@@ -1,0 +1,77 @@
+{
+  "personal_info": {
+    "name": "Daniel Béni NIYOBUZIMA",
+    "email": "daniel-beni.niyobuzima@isen.yncrea.fr",
+    "phone": "+33 7 75 86 10 85",
+    "location": "Toulon la Garde / PACA / Ile de France",
+    "languages": {
+      "French": "C1/C2 (Bilingue/Maternel)",
+      "English": "B2 (Opérationnel)"
+    }
+  },
+  "summary": "Étudiant ingénieur en 4e année à l'ISEN Méditerranée (Dév / Cloud / IA). Profil polyvalent recherchant un stage d'application dès juin (avec possibilité d'alternance en octobre). Capable d'intervenir sur des problématiques DevOps, Full-Stack Web, Data/BI et IA.",
+  "education": [
+    {
+      "degree": "Diplôme d'ingénieur (Dév, Cloud, IA)",
+      "institution": "ISEN Méditerranée, campus Toulon",
+      "years": "2025-2027"
+    },
+    {
+      "degree": "Diplôme de licence en Informatique",
+      "institution": "Université de Limoges",
+      "years": "2022-2024"
+    },
+    {
+      "degree": "DUT Systèmes & Réseaux Télécoms",
+      "institution": "Université de Lac Tanganyika - BURUNDI",
+      "years": "2018-2020"
+    }
+  ],
+  "experiences": [
+    {
+      "title": "Consultant IT / Technicien systèmes & réseaux",
+      "company": "Heineken Burundi (BRARUDI S.A.)",
+      "period": "Nov 2020 - Juil 2022",
+      "tasks": [
+        "Monitoring réseau en temps réel et configuration de switches Cisco",
+        "Déploiement de postes Windows et gestion des bases de données d'accès",
+        "Help Desk support : Diagnostic et résolution de pannes (matérielles, logicielles et réseau)",
+        "Cybersécurité : Mise à jour et supervision du parc antivirus"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "ATS Agentic App",
+      "role": "Chef de projet (Équipe de 5)",
+      "period": "Oct 2025 - Juin 2026",
+      "description": "Application web d'optimisation de CV et scoring ATS (Reverse engineering).",
+      "technologies": ["Next.js", "FastAPI", "GCP Cloud Run", "Pub/Sub", "PostgreSQL", "Docker", "GitLab CI/CD"]
+    },
+    {
+      "name": "TaskFlow",
+      "period": "Janv 2026",
+      "description": "Déploiement de 5 microservices backend conteneurisés.",
+      "technologies": ["Docker", "Kubernetes (Minikube)", "Networking", "Policies"]
+    },
+    {
+      "name": "NOTEFLOW",
+      "period": "Sept - Oct 2025",
+      "description": "Application de transcription et résumé de discours en temps réel.",
+      "technologies": ["Python", "Whisper", "LangChain", "LLaMA", "Streamlit", "Docker"]
+    },
+    {
+      "name": "Solution BI de bout-en-bout",
+      "period": "Projet de certification",
+      "description": "Création d'un flux ETL, modélisation de données et création de dashboards.",
+      "technologies": ["Power BI", "Power Query", "DAX", "SQL Server"]
+    }
+  ],
+  "skills": {
+    "devops_cloud": ["Docker", "Kubernetes", "Terraform", "Ansible", "GCP (Cloud Run, Pub/Sub)", "AWS", "GitLab CI", "Jenkins"],
+    "backend_data": ["Python", "FastAPI", "Java", "Quarkus", "PostgreSQL", "SQL Server", "Power BI", "DAX"],
+    "frontend": ["Next.js", "Vue.js", "HTML/CSS", "JavaScript", "TypeScript", "TailwindCSS"],
+    "ia": ["Scikit-learn", "TensorFlow", "Pandas", "LLMs (LLaMA, Gemini)"],
+    "systems_networks": ["Linux", "Bash", "VLAN", "Active Directory", "TCP/IP", "Cisco"]
+  }
+}

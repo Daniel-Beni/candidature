@@ -1,0 +1,23 @@
+# =========================
+# SÉCURITÉ (Ne jamais commit)
+# =========================
+.env
+
+# =========================
+# BASES DE DONNÉES
+# =========================
+*.db
+*.sqlite3
+data/
+db_data/
+
+# =========================
+# FICHIERS PYTHON & LOGS
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.log
+.venv/
+venv/
+env/
